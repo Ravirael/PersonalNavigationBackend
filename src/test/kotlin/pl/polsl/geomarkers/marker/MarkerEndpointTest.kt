@@ -1,4 +1,4 @@
-package pl.polsl.geomarkers.authentication
+package pl.polsl.geomarkers.marker
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.Assert
@@ -13,21 +13,13 @@ import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
-import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
-import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import org.springframework.web.context.WebApplicationContext
-import javax.annotation.Resource
-import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
-import pl.polsl.geomarkers.MockMvcFactory
-import pl.polsl.geomarkers.andGetSuccessfullJson
-import pl.polsl.geomarkers.postEmpty
-import pl.polsl.geomarkers.postJson
-import java.util.*
-
+import pl.polsl.geomarkers.*
+import pl.polsl.geomarkers.authentication.AuthenticationData
+import javax.servlet.http.HttpSession
 
 @RunWith(SpringRunner::class)
 @SpringBootTest
-class AuthenticationTest {
+class MarkerEndpointTest {
     @Autowired
     lateinit var mockMvcFactory: MockMvcFactory
 
@@ -36,16 +28,16 @@ class AuthenticationTest {
     @Before
     fun setUp() {
         mock = mockMvcFactory.createMockMvc()
+
     }
 
-    @Test
-    fun `registering and logging with retrieved credentials should succeed`() {
+    fun registerAndLogin(): MockHttpSession? {
 
         val authentication = mock
                 .postEmpty("/authentication")
                 .andGetSuccessfullJson<AuthenticationData>()
 
-        val session = mock
+        return mock
                 .perform(
                         MockMvcRequestBuilders
                                 .post("/authenticate")
@@ -55,24 +47,29 @@ class AuthenticationTest {
                 .andExpect(MockMvcResultMatchers.status().is2xxSuccessful)
                 .andReturn()
                 .request
-                .session
-
-        Assert.assertNotNull(session)
-        Assert.assertNotNull(session as? MockHttpSession)
+                .session as MockHttpSession
 
     }
 
     @Test
-    fun `logging with invalid credentials should fail`() {
-        mock
-                .postJson(
-                        "/authenticate",
-                        AuthenticationData(
-                            id = 0,
-                            key = UUID.randomUUID().toString()
-                        )
-                )
-                .andExpect(MockMvcResultMatchers.status().is4xxClientError)
-    }
+    fun `inserting marker and retrieving it should succeed`() {
+        val session = registerAndLogin()
 
+        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+
+        mock
+                .postJson("/markers", marker, session)
+                .andExpectSuccessfulStatus()
+
+        val retrievedMarkers = mock
+                .get("/markers")
+                .andGetSuccessfullJson<Array<JpaMarker>>()
+
+        Assert.assertEquals(1, retrievedMarkers.size)
+
+        val retrievedMarker = retrievedMarkers.first()
+
+        Assert.assertEquals(marker.name, retrievedMarker.name)
+        Assert.assertEquals(marker.position, retrievedMarker.position)
+    }
 }
