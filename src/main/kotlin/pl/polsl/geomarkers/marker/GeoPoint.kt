@@ -1,7 +1,7 @@
-package pl.polsl.geomarkers
+package pl.polsl.geomarkers.marker
 
 interface GeoPoint {
-    val longitude: Double
     val latitude: Double
+    val longitude: Double
     val altitude: Double
 }

@@ -1,4 +1,6 @@
-package pl.polsl.geomarkers
+package pl.polsl.geomarkers.marker
+
+import pl.polsl.geomarkers.GenerateNoArg
 
 @GenerateNoArg
 data class DefaultGeoPoint(

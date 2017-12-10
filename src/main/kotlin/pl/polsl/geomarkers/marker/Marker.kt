@@ -1,9 +1,8 @@
-package pl.polsl.geomarkers
+package pl.polsl.geomarkers.marker
 
 import java.util.*
 
 interface Marker {
-    val id: UUID
     val name: String
     val position: GeoPoint
 }

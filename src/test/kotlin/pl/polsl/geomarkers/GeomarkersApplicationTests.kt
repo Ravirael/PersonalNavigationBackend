@@ -5,6 +5,9 @@ import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.junit4.SpringRunner
+import pl.polsl.geomarkers.marker.DefaultGeoPoint
+import pl.polsl.geomarkers.marker.JpaMarker
+import pl.polsl.geomarkers.marker.MarkerRepository
 import java.util.*
 
 @RunWith(SpringRunner::class)
@@ -16,17 +19,7 @@ class GeomarkersApplicationTests {
 
 	@Test
 	fun contextLoads() {
-		val marker = JpaMarker(
-				id = UUID.randomUUID(),
-				name = "Rafał",
-				position = DefaultGeoPoint(
-						54.4,
-						54.2,
-						0.0
-				)
-		)
 
-		markerRepository.save(marker)
 	}
 
 }

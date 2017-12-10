@@ -3,6 +3,7 @@ package pl.polsl.geomarkers.authentication
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.security.Principal
 import java.util.*
 
 @Service
@@ -23,4 +24,12 @@ class DefaultAuthenticationService(
         return authentication
     }
 
+    override fun principalId(principal: Principal): Long {
+        val id = principal.name.toLong()
+        return if (authentitcations.containsKey(id)) {
+            id
+        } else {
+            throw UsernameNotFoundException("$id is invalid!")
+        }
+    }
 }
