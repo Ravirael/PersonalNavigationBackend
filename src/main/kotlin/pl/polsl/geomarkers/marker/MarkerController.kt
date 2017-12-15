@@ -31,5 +31,10 @@ class MarkerController(
         return boundingBox.map { markerService.markersIn(it) }.orElseGet { markerService.markers() }
     }
 
+    @RequestMapping(value = ["/marker/{id}"], method = [RequestMethod.GET])
+    fun getMarker(@PathVariable id: Long): IdentifiableMarker {
+        return markerService.marker(id)
+    }
+
 }
 

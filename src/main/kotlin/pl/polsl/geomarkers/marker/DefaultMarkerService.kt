@@ -37,4 +37,8 @@ class DefaultMarkerService(
                 upperLongitude = bounds.longitudeRange.endInclusive
         )
     }
+
+    override fun marker(id: Long): IdentifiableMarker {
+        return markerRepository.findOne(id)
+    }
 }
