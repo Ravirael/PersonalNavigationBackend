@@ -1,5 +1,6 @@
 package pl.polsl.geomarkers.marker
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import pl.polsl.geomarkers.authentication.AuthenticationService
@@ -27,8 +28,11 @@ class MarkerController(
     }
 
     @RequestMapping(value = ["/markers"], method = [RequestMethod.GET])
-    fun getMarkers(@RequestParam boundingBox: Optional<DefaultBoundingBox>): List<IdentifiableMarker> {
-        return boundingBox.map { markerService.markersIn(it) }.orElseGet { markerService.markers() }
+    fun getMarkers(@RequestParam(required = false) boundingBox: Optional<String>): List<IdentifiableMarker> {
+        return boundingBox
+                .map { ObjectMapper().readValue(it, DefaultBoundingBox::class.java) }
+                .map { markerService.markersIn(it) }
+                .orElseGet { markerService.markers() }
     }
 
     @RequestMapping(value = ["/marker/{id}"], method = [RequestMethod.GET])

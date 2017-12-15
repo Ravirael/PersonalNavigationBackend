@@ -31,13 +31,13 @@ class MarkerEndpointTest {
 
     }
 
-    fun registerAndLogin(): MockHttpSession? {
+    fun registerAndLogin(): Pair<AuthenticationData, MockHttpSession> {
 
         val authentication = mock
                 .postEmpty("/authentication")
                 .andGetSuccessfullJson<AuthenticationData>()
 
-        return mock
+        val session = mock
                 .perform(
                         MockMvcRequestBuilders
                                 .post("/authenticate")
@@ -49,11 +49,31 @@ class MarkerEndpointTest {
                 .request
                 .session as MockHttpSession
 
+        return authentication to session
+
     }
 
     @Test
-    fun `inserting marker and retrieving it should succeed`() {
-        val session = registerAndLogin()
+    fun `inserted markers should be retrievable by id`() {
+        val (authentication, session) = registerAndLogin()
+
+        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+
+        mock
+                .postJson("/markers", marker, session)
+                .andExpectSuccessfulStatus()
+
+        val retrievedMarker = mock
+                .get("/marker/${authentication.id}")
+                .andGetSuccessfullJson<JpaMarker>()
+
+        Assert.assertEquals(marker.name, retrievedMarker.name)
+        Assert.assertEquals(marker.position, retrievedMarker.position)
+    }
+
+    @Test
+    fun `all markers should contain inserted marker`() {
+        val (authentication, session) = registerAndLogin()
 
         val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
 
@@ -65,11 +85,73 @@ class MarkerEndpointTest {
                 .get("/markers")
                 .andGetSuccessfullJson<Array<JpaMarker>>()
 
-        Assert.assertEquals(1, retrievedMarkers.size)
 
-        val retrievedMarker = retrievedMarkers.first()
+        val retrievedMarker = retrievedMarkers.find { it.id == authentication.id }!!
 
         Assert.assertEquals(marker.name, retrievedMarker.name)
         Assert.assertEquals(marker.position, retrievedMarker.position)
+    }
+
+    @Test
+    fun `markers within valid bound box should contain inserted marker`() {
+        val (authentication, session) = registerAndLogin()
+
+        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+
+        val boundingBox = DefaultBoundingBox(
+                east = 30.0,
+                west = 20.0,
+                north = 60.0,
+                south = 40.0
+        )
+
+        val boundingBoxJson = ObjectMapper().writeValueAsString(boundingBox)
+
+        mock
+                .postJson("/markers", marker, session)
+                .andExpectSuccessfulStatus()
+
+        val retrievedMarkers = mock
+                .perform(
+                        MockMvcRequestBuilders
+                                .get("/markers")
+                                .param("boundingBox", boundingBoxJson)
+                )
+                .andGetSuccessfullJson<Array<JpaMarker>>()
+
+        val retrievedMarker = retrievedMarkers.find { it.id == authentication.id }!!
+
+        Assert.assertEquals(marker.name, retrievedMarker.name)
+        Assert.assertEquals(marker.position, retrievedMarker.position)
+    }
+
+    @Test
+    fun `markers within invalid bound box should not contain inserted marker`() {
+        val (authentication, session) = registerAndLogin()
+
+        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+
+        val boundingBox = DefaultBoundingBox(
+                east = 30.0,
+                west = 26.0,
+                north = 60.0,
+                south = 40.0
+        )
+
+        val boundingBoxJson = ObjectMapper().writeValueAsString(boundingBox)
+
+        mock
+                .postJson("/markers", marker, session)
+                .andExpectSuccessfulStatus()
+
+        val retrievedMarkers = mock
+                .perform(
+                        MockMvcRequestBuilders
+                                .get("/markers")
+                                .param("boundingBox", boundingBoxJson)
+                )
+                .andGetSuccessfullJson<Array<JpaMarker>>()
+
+        Assert.assertNull(retrievedMarkers.find { it.id == authentication.id })
     }
 }

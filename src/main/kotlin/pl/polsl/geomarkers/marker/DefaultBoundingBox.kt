@@ -5,10 +5,10 @@ import pl.polsl.geomarkers.GenerateNoArg
 
 @GenerateNoArg
 data class DefaultBoundingBox(
-        private val north: Double,
-        private val east: Double,
-        private val south: Double,
-        private val west: Double
+        val north: Double,
+        val east: Double,
+        val south: Double,
+        val west: Double
 ) : BoundingBox {
     @get:JsonIgnore
     override val latitudeRange: ClosedRange<Double>
