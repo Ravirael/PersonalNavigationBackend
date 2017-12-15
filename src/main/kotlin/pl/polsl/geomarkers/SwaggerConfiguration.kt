@@ -11,6 +11,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2
 import springfox.documentation.builders.ApiInfoBuilder
 import springfox.documentation.service.ApiInfo
 import springfox.documentation.service.Contact
+import java.util.*
 
 
 @Configuration
@@ -23,6 +24,7 @@ class SwaggerConfig {
                 .apis(RequestHandlerSelectors.any())
                 .paths(PathSelectors.any())
                 .build()
+                .genericModelSubstitutes(Optional::class.java)
                 .apiInfo(apiInfo())
     }
 
