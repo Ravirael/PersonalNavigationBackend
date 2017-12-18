@@ -16,10 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled=true)
 class SecurityConfiguration(
-        @Autowired
         private val userDetailsService: UserDetailsService,
 
-        @Autowired
         private val passwordEncoder: PasswordEncoder
 ): WebSecurityConfigurerAdapter() {
     override fun configure(auth: AuthenticationManagerBuilder) {

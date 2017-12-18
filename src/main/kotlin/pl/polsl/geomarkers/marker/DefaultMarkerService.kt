@@ -1,9 +1,11 @@
 package pl.polsl.geomarkers.marker
 
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 
 @Service
+@Transactional
 class DefaultMarkerService(
         private val markerRepository: MarkerRepository,
         private val clock: Clock
