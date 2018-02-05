@@ -41,6 +41,6 @@ class DefaultMarkerService(
     }
 
     override fun marker(id: Long): IdentifiableMarker {
-        return markerRepository.findOne(id)
+        return markerRepository.findOne(id) ?: throw MarkerNotFoundException(id)
     }
 }

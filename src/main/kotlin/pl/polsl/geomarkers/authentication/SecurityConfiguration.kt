@@ -30,7 +30,6 @@ class SecurityConfiguration(
     override fun configure(http: HttpSecurity) {
         http
                 //.addFilterBefore(CORSFilter(), ChannelProcessingFilter::class.java)
-
                 .formLogin()
                 .successHandler(RestAuthenticationSuccessHandler())
                 .failureHandler(RestAuthenticationFailureHandler())
