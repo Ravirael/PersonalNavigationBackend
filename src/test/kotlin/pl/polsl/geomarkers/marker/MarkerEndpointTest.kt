@@ -1,6 +1,7 @@
 package pl.polsl.geomarkers.marker
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -15,7 +16,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 import pl.polsl.geomarkers.*
 import pl.polsl.geomarkers.authentication.AuthenticationData
-import javax.servlet.http.HttpSession
 
 @RunWith(SpringRunner::class)
 @SpringBootTest
@@ -23,12 +23,20 @@ class MarkerEndpointTest {
     @Autowired
     lateinit var mockMvcFactory: MockMvcFactory
 
+    @Autowired
+    lateinit var markerRepository: MarkerRepository
+
     private lateinit var mock: MockMvc
+
 
     @Before
     fun setUp() {
         mock = mockMvcFactory.createMockMvc()
+    }
 
+    @After
+    fun tearDown() {
+        markerRepository.deleteAll()
     }
 
     fun registerAndLogin(): Pair<AuthenticationData, MockHttpSession> {
@@ -53,11 +61,31 @@ class MarkerEndpointTest {
 
     }
 
+    private fun createMarker(
+            name: String = "name",
+            position: DefaultGeoPoint = DefaultGeoPoint(25.0, 50.0, 100.0),
+            gender: Gender = Gender.Female,
+            skill: Skill = Skill.Low
+    ) = DefaultMarker(name, position, gender, skill)
+
+    private fun addMarker(
+            name: String = "name",
+            position: DefaultGeoPoint = DefaultGeoPoint(25.0, 50.0, 100.0),
+            gender: Gender = Gender.Female,
+            skill: Skill = Skill.Low
+    ) {
+        val (authentication, session) = registerAndLogin()
+        val marker = DefaultMarker(name, position, gender, skill)
+        mock
+                .postJson("/markers", marker, session)
+                .andExpectSuccessfulStatus()
+    }
+
     @Test
     fun `inserted markers should be retrievable by id`() {
         val (authentication, session) = registerAndLogin()
 
-        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+        val marker = createMarker()
 
         mock
                 .postJson("/markers", marker, session)
@@ -75,7 +103,7 @@ class MarkerEndpointTest {
     fun `all markers should contain inserted marker`() {
         val (authentication, session) = registerAndLogin()
 
-        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+        val marker = createMarker()
 
         mock
                 .postJson("/markers", marker, session)
@@ -96,7 +124,7 @@ class MarkerEndpointTest {
     fun `markers within valid bound box should contain inserted marker`() {
         val (authentication, session) = registerAndLogin()
 
-        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+        val marker = createMarker()
 
         val boundingBox = DefaultBoundingBox(
                 east = 30.0,
@@ -129,7 +157,7 @@ class MarkerEndpointTest {
     fun `markers within invalid bound box should not contain inserted marker`() {
         val (authentication, session) = registerAndLogin()
 
-        val marker = DefaultMarker("name", DefaultGeoPoint(25.0, 50.0, 100.0))
+        val marker = createMarker()
 
         val boundingBox = DefaultBoundingBox(
                 east = 30.0,
@@ -154,4 +182,22 @@ class MarkerEndpointTest {
 
         Assert.assertNull(retrievedMarkers.find { it.id == authentication.id })
     }
+
+    @Test
+    fun `gender filter should filter out wrong markers`() {
+        addMarker(gender = Gender.Male)
+        addMarker(gender = Gender.Female)
+
+        val retrievedMarkers = mock
+                .perform(
+                        MockMvcRequestBuilders
+                                .get("/markers")
+                                .param("genders", "Female")
+                )
+                .andGetSuccessfullJson<Array<JpaMarker>>()
+
+        Assert.assertEquals(1, retrievedMarkers.size)
+        Assert.assertTrue(retrievedMarkers.all { it.gender == Gender.Female })
+    }
+
 }

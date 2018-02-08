@@ -30,17 +30,55 @@ class MarkerController(
 
     @RequestMapping(value = ["/markers"], method = [RequestMethod.GET])
     fun getMarkers(
+            principal: Principal?,
+
             @ApiParam(
                     value = """JSON containing a valid bounding box eg. `{"north":50, "south": 40, "west": 30, "east": 20}`""",
                     example = """{"north":50, "south": 40, "west": 30, "east": 20}""",
                     required = false
             )
-            @RequestParam(required = false) boundingBox: Optional<String>
+            @RequestParam(required = false)
+            boundingBox: Optional<String>,
+
+            @RequestParam(required = false, defaultValue = "")
+            genders: List<Gender>,
+
+            @RequestParam(required = false, defaultValue = "")
+            skills: List<Skill>
     ): List<IdentifiableMarker> {
-        return boundingBox
-                .map { ObjectMapper().readValue(it, DefaultBoundingBox::class.java) }
-                .map { markerService.markersIn(it) }
-                .orElseGet { markerService.markers() }
+        val mappedBoundingBox =  boundingBox
+                .map { ObjectMapper().readValue(it, DefaultBoundingBox::class.java) as BoundingBox }
+
+        return markerService.filteredMarkersIn(
+                userId = Optional.ofNullable(principal).map { authenticationService.principalId(it) },
+                bounds = mappedBoundingBox,
+                genders = if (genders.isEmpty()) EnumSet.allOf(Gender::class.java) else EnumSet.copyOf(genders),
+                skills = if (skills.isEmpty()) EnumSet.allOf(Skill::class.java) else EnumSet.copyOf(skills)
+        )
+    }
+
+    @RequestMapping(value = ["/markers/sorted"], method = [RequestMethod.GET])
+    fun getFilteredSortedMarkers(
+            principal: Principal?,
+
+            @RequestParam(required = false, defaultValue = "")
+            genders: List<Gender>,
+
+            @RequestParam(required = false, defaultValue = "")
+            skills: List<Skill>,
+
+            @RequestParam
+            limit: Int
+
+    ): List<IdentifiableMarker> {
+        val id = authenticationService.principalId(principal!!)
+
+        return markerService.closestMarkers(
+                id = id,
+                genders = if (genders.isEmpty()) EnumSet.allOf(Gender::class.java) else EnumSet.copyOf(genders),
+                skills = if (skills.isEmpty()) EnumSet.allOf(Skill::class.java) else EnumSet.copyOf(skills),
+                limit = limit
+        )
     }
 
     @RequestMapping(value = ["/marker/{id}"], method = [RequestMethod.GET])

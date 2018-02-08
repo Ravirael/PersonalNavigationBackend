@@ -3,6 +3,7 @@ package pl.polsl.geomarkers.marker
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.util.*
 
 @Service
 @Transactional
@@ -15,7 +16,9 @@ class DefaultMarkerService(
                 id = id,
                 name = marker.name,
                 position = marker.position,
-                updateTimestamp = clock.instant()
+                updateTimestamp = clock.instant(),
+                gender = marker.gender,
+                skill = marker.skill
         )
         if (markerRepository.exists(id)) {
             markerRepository.delete(id)
@@ -42,5 +45,40 @@ class DefaultMarkerService(
 
     override fun marker(id: Long): IdentifiableMarker {
         return markerRepository.findOne(id) ?: throw MarkerNotFoundException(id)
+    }
+
+    override fun filteredMarkersIn(
+            userId: Optional<Long>,
+            bounds: Optional<BoundingBox>,
+            genders: EnumSet<Gender>,
+            skills: EnumSet<Skill>
+    ): List<IdentifiableMarker> {
+        return bounds
+                .map { markersIn(it) }
+                .orElseGet { markers() }
+                .filter { marker ->
+                    userId.map { it == marker.id  }.orElse(false) ||
+                            (marker.gender in genders && marker.skill in skills)
+                }
+    }
+
+    override fun closestMarkers(
+            id: Long,
+            genders: EnumSet<Gender>,
+            skills: EnumSet<Skill>,
+            limit: Int
+    ): List<DistanceMarker> {
+        val userMarker = marker(id)
+
+        return filteredMarkersIn(
+                userId = Optional.empty(),
+                bounds = Optional.empty(),
+                genders = genders,
+                skills = skills
+        )
+                .map { DistanceMarker(it, it.position.distanceTo(userMarker.position)) }
+                .sortedBy { it.distance }
+                .filter { it.id != id }
+                .take(limit)
     }
 }
